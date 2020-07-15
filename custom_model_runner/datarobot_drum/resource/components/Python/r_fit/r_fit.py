@@ -1,19 +1,37 @@
 import logging
-import sys
+import os
 import pandas as pd
 
-from mlpiper.components.connectable_component import ConnectableComponent
-from pathlib import Path
-
 from datarobot_drum.drum.common import LOGGER_NAME_PREFIX
-from datarobot_drum.drum.model_adapter import PythonModelAdapter
+from pathlib import Path
+from mlpiper.components.connectable_component import ConnectableComponent
 
 logger = logging.getLogger(LOGGER_NAME_PREFIX + "." + __name__)
 
+try:
+    import rpy2.robjects as ro
+    from rpy2.robjects import pandas2ri
+    from rpy2.robjects.conversion import localconverter
+except ImportError:
+    error_message = (
+        "rpy2 package is not installed."
+        "Install datarobot-drum using 'pip install datarobot-drum[R]'"
+        "Available for Python>=3.6"
+    )
+    logger.error(error_message)
+    exit(1)
 
-class PythonFit(ConnectableComponent):
+
+pandas2ri.activate()
+CUR_DIR = os.path.dirname(os.path.abspath(__file__))
+R_FIT_PATH = os.path.join(CUR_DIR, "fit.R")
+
+r_handler = ro.r
+
+
+class RFit(ConnectableComponent):
     def __init__(self, engine):
-        super(PythonFit, self).__init__(engine)
+        super(RFit, self).__init__(engine)
         self.target_name = None
         self.output_dir = None
         self.estimator = None
@@ -24,11 +42,10 @@ class PythonFit(ConnectableComponent):
         self.weights = None
         self.weights_filename = None
         self.target_filename = None
-        self._model_adapter = None
         self.num_rows = None
 
     def configure(self, params):
-        super(PythonFit, self).configure(params)
+        super(RFit, self).configure(params)
         self.custom_model_path = self._params["__custom_model_path__"]
         self.input_filename = self._params["inputFilename"]
         self.target_name = self._params.get("targetColumn")
@@ -40,17 +57,23 @@ class PythonFit(ConnectableComponent):
         self.target_filename = self._params.get("targetFilename")
         self.num_rows = self._params["numRows"]
 
-        self._model_adapter = PythonModelAdapter(self.custom_model_path)
-        sys.path.append(self.custom_model_path)
-        self._model_adapter.load_custom_hooks()
+        r_handler.source(R_FIT_PATH)
+        r_handler.init(self.custom_model_path)
 
     def _materialize(self, parent_data_objs, user_data):
-
         X, y, class_order, row_weights = shared_preprocessing(self)
 
-        self._model_adapter.fit(
-            X, y, output_dir=self.output_dir, class_order=class_order, row_weights=row_weights
-        )
+        df = X
+        df.iloc[:, self.target_name] = y
+        with localconverter(ro.default_converter + pandas2ri.converter):
+            r_df = ro.conversion.py2rpy(X)
+            r_row_weights = ro.conversion.py2rpy(row_weights)
+
+        r_handler.outer_fit(r_df,
+                            output_dir=self.output_dir,
+                            class_order=class_order,
+                            row_weights=r_row_weights
+                            )
 
         make_sure_artifact_is_small(self.output_dir)
         return []
@@ -117,3 +140,5 @@ def shared_preprocessing(fit_class):
     )
 
     return X, y, class_order, row_weights
+
+
