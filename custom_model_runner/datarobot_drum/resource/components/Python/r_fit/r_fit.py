@@ -63,13 +63,13 @@ class RFit(ConnectableComponent):
     def _materialize(self, parent_data_objs, user_data):
         X, y, class_order, row_weights = shared_preprocessing(self)
 
-        df = X
-        df.iloc[:, self.target_name] = y
         with localconverter(ro.default_converter + pandas2ri.converter):
-            r_df = ro.conversion.py2rpy(X)
+            r_X = ro.conversion.py2rpy(X)
+            r_y = ro.conversion.py2rpy(y)
             r_row_weights = ro.conversion.py2rpy(row_weights)
 
-        r_handler.outer_fit(r_df,
+        r_handler.outer_fit(X=r_X,
+                            y=r_y,
                             output_dir=self.output_dir,
                             class_order=class_order,
                             row_weights=r_row_weights

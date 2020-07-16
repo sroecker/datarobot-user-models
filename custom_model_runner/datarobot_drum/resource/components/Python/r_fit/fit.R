@@ -79,10 +79,11 @@ init <- function(code_dir) {
 #' @param row_weights array with row weights, or NULL
 #'
 
-outer_fit <- function(data, output_dir, class_order, row_weights) {
+outer_fit <- function(X, y, output_dir, class_order, row_weights) {
     if (!isFALSE(fit_hook)) {
         kwargs <- list()
-        kwargs <- append(kwargs, list(data=data,
+        kwargs <- append(kwargs, list(X=X,
+                                      y=y,
                                       output_dir=output_dir,
                                       class_order=class_order,
                                       row_weights=row_weights))
