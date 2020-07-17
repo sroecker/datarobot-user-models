@@ -58,16 +58,20 @@ getHookMethod <- function(name, pkgName = "custom") {
 }
 
 init <- function(code_dir) {
+  if (file.exists(file.path(code_dir, 'custom.R'))){
     custom_path <- file.path(code_dir, "custom.R")
-    custom_loaded <- import(custom_path)
-    if (isTRUE(custom_loaded)) {
-        init_hook <<- getHookMethod("init")
-        fit_hook <<- getHookMethod("fit")
-    }
+  } else {
+    custom_path <- file.path(code_dir, "custom.r")
+  }
+  custom_loaded <- import(custom_path)
+  if (isTRUE(custom_loaded)) {
+    init_hook <<- getHookMethod("init")
+    fit_hook <<- getHookMethod("fit")
+  }
 
-    if (!isFALSE(init_hook)) {
-        init_hook(code_dir=code_dir)
-    }
+  if (!isFALSE(init_hook)) {
+    init_hook(code_dir=code_dir)
+  }
 }
 
 
@@ -79,7 +83,7 @@ init <- function(code_dir) {
 #' @param row_weights array with row weights, or NULL
 #'
 
-outer_fit <- function(X, y, output_dir, class_order, row_weights) {
+outer_fit <- function(X, y, output_dir, class_order=NULL, row_weights=NULL) {
     if (!isFALSE(fit_hook)) {
         kwargs <- list()
         kwargs <- append(kwargs, list(X=X,
