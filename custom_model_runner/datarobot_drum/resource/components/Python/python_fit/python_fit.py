@@ -1,12 +1,11 @@
 import logging
 import sys
-import pandas as pd
 
 from mlpiper.components.connectable_component import ConnectableComponent
-from pathlib import Path
 
 from datarobot_drum.drum.common import LOGGER_NAME_PREFIX
 from datarobot_drum.drum.model_adapter import PythonModelAdapter
+from datarobot_drum.drum.utils import shared_fit_preprocessing, make_sure_artifact_is_small
 
 logger = logging.getLogger(LOGGER_NAME_PREFIX + "." + __name__)
 
@@ -46,7 +45,7 @@ class PythonFit(ConnectableComponent):
 
     def _materialize(self, parent_data_objs, user_data):
 
-        X, y, class_order, row_weights = shared_preprocessing(self)
+        X, y, class_order, row_weights = shared_fit_preprocessing(self)
 
         self._model_adapter.fit(
             X, y, output_dir=self.output_dir, class_order=class_order, row_weights=row_weights
@@ -55,65 +54,3 @@ class PythonFit(ConnectableComponent):
         make_sure_artifact_is_small(self.output_dir)
         return []
 
-
-# TODO: move these guys
-def make_sure_artifact_is_small(output_dir):
-    """
-    # TODO: docstring
-    :param output_dir:
-    :return:
-    """
-    MEGABYTE = 1024 * 1024
-    GIGABYTE = 1024 * MEGABYTE
-    root_directory = Path(output_dir)
-    dir_size = sum(f.stat().st_size for f in root_directory.glob("**/*") if f.is_file())
-    logger.info("Artifact directory has been filled to {} Megabytes".format(dir_size / MEGABYTE))
-    assert dir_size < 10 * GIGABYTE
-
-
-def shared_preprocessing(fit_class):
-    """
-    # TODO: docstring, lots of comments
-    :param fit_class:
-    :return:
-    """
-    df = pd.read_csv(fit_class.input_filename)
-    if fit_class.num_rows == "ALL":
-        fit_class.num_rows = len(df)
-    else:
-        fit_class.num_rows = int(fit_class.num_rows)
-    if fit_class.target_filename:
-        X = df.sample(fit_class.num_rows, random_state=1)
-        y = pd.read_csv(fit_class.target_filename, index_col=False).sample(
-            fit_class.num_rows, random_state=1
-        )
-        assert len(y.columns) == 1
-        assert len(X) == len(y)
-        y = y.iloc[:, 0]
-    else:
-        X = df.drop(fit_class.target_name, axis=1).sample(
-            fit_class.num_rows, random_state=1, replace=True
-        )
-        y = df[fit_class.target_name].sample(fit_class.num_rows, random_state=1, replace=True)
-
-    if fit_class.weights_filename:
-        row_weights = pd.read_csv(fit_class.weights_filename).sample(
-            fit_class.num_rows, random_state=1, replace=True
-        )
-    elif fit_class.weights:
-        if fit_class.weights not in X.columns:
-            raise ValueError(
-                "The column name {} is not one of the columns in "
-                "your training data".format(fit_class.weights)
-            )
-        row_weights = X[fit_class.weights]
-    else:
-        row_weights = None
-
-    class_order = (
-        [fit_class.negative_class_label, fit_class.positive_class_label]
-        if fit_class.negative_class_label
-        else None
-    )
-
-    return X, y, class_order, row_weights
