@@ -51,6 +51,7 @@ class CMRunner(object):
             (RunMode.SCORE, RunLanguage.JAVA): "java_predictor.json.j2",
             (RunMode.SERVER, RunLanguage.JAVA): "java_predictor_for_server.json.j2",
             (RunMode.FIT, RunLanguage.PYTHON): "python_fit.json.j2",
+            (RunMode.FIT, RunLanguage.R): "r_fit.json.j2",
         }
 
     @staticmethod
@@ -298,8 +299,8 @@ class CMRunner(object):
         return functional_pipeline_str
 
     def _run_fit_and_predictions_pipelines_in_mlpiper(self):
+        run_language = self._check_artifacts_and_get_run_language()
         if self.run_mode == RunMode.SERVER:
-            run_language = self._check_artifacts_and_get_run_language()
             # in prediction server mode infra pipeline == prediction server runner pipeline
             infra_pipeline_str = self._prepare_prediction_server_or_batch_pipeline(run_language)
         elif self.run_mode == RunMode.SCORE:
@@ -309,11 +310,9 @@ class CMRunner(object):
                 # keep object reference so it will be destroyed only in the end of the process
                 __tmp_output_file = tempfile.NamedTemporaryFile(mode="w")
                 self.options.output = tmp_output_filename = __tmp_output_file.name
-            run_language = self._check_artifacts_and_get_run_language()
             # in batch prediction mode infra pipeline == predictor pipeline
             infra_pipeline_str = self._prepare_prediction_server_or_batch_pipeline(run_language)
         elif self.run_mode == RunMode.FIT:
-            run_language = RunLanguage.PYTHON
             infra_pipeline_str = self._prepare_fit_pipeline(run_language)
         else:
             error_message = "{} mode is not supported here".format(self.run_mode)
