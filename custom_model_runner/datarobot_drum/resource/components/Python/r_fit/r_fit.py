@@ -61,18 +61,23 @@ class RFit(ConnectableComponent):
         r_handler.init(self.custom_model_path)
 
     def _materialize(self, parent_data_objs, user_data):
+
         X, y, class_order, row_weights = shared_fit_preprocessing(self)
+
+        optional_args = {}
 
         with localconverter(ro.default_converter + pandas2ri.converter):
             r_X = ro.conversion.py2rpy(X)
             r_y = ro.conversion.py2rpy(y)
-            r_row_weights = ro.conversion.py2rpy(row_weights)
+            if row_weights:
+                optional_args['row_weights'] = ro.conversion.py2rpy(row_weights)
+            if class_order:
+                optional_args['class_order'] = ro.conversion.py2rpy(class_order)
 
         r_handler.outer_fit(X=r_X,
                             y=r_y,
                             output_dir=self.output_dir,
-                            class_order=class_order,
-                            row_weights=r_row_weights
+                            ** optional_args
                             )
 
         make_sure_artifact_is_small(self.output_dir)

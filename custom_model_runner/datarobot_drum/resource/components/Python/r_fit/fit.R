@@ -20,7 +20,7 @@ import <- function(srcFiles, pkgName = "custom") {
     tryCatch(
         {
             package.skeleton(name=pkgName, path = dd, code_files=srcFiles)
-            load_all(file.path(dd, pkgName))
+            load_all(file.path(dd, pkgName)) # warn_conflicts = FALSE
             return(TRUE)
         },
         error = function(cond) {

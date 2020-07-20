@@ -39,8 +39,6 @@ fit <- function(X, y, output_dir, class_order=NULL, row_weights=NULL, ...){
     outfile <-'r_reg.rds'
   }
 
-  # todo: weights
-
   # set up the modeling pipeline
   model_recipe <- recipe(target ~ ., data = train_df) %>%
     # Drop constant columns
