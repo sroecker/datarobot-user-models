@@ -73,7 +73,7 @@ class RFit(ConnectableComponent):
         with localconverter(ro.default_converter + pandas2ri.converter):
             r_X = ro.conversion.py2rpy(X)
             r_y = ro.conversion.py2rpy(y)
-            if row_weights:
+            if row_weights is not None:  # pandas complains if we aren't explicit here
                 optional_args['row_weights'] = ro.conversion.py2rpy(row_weights)
             if class_order:
                 optional_args['class_order'] = ro.conversion.py2rpy(class_order)
