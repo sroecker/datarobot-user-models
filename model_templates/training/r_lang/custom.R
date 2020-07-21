@@ -32,13 +32,6 @@ fit <- function(X, y, output_dir, class_order=NULL, row_weights=NULL, ...){
   train_df <- X
   train_df$target <- unlist(y)
 
-  if (!is.null(class_order)){
-    # maybe add more processing to y if needed? R might not care
-    outfile <- 'r_classif.rds'
-  }else{
-    outfile <-'r_reg.rds'
-  }
-
   # set up the modeling pipeline
   model_recipe <- recipe(target ~ ., data = train_df) %>%
     # Drop constant columns
@@ -54,19 +47,9 @@ fit <- function(X, y, output_dir, class_order=NULL, row_weights=NULL, ...){
   model <- train(model_recipe, train_df, method = "gbm")
 
   # Save model
-  if(
-    substr(output_dir,
-          nchar(output_dir),
-          nchar(output_dir)) == '/'
-    ) {
-    seperator = ''
-  } else {
-    seperator = '/'
-  }
-
   model_path <- file.path(
     paste(
-      output_dir, outfile, sep=seperator
+      output_dir, 'artifact.rds', sep=''
     )
   )
   saveRDS(model, file = model_path)

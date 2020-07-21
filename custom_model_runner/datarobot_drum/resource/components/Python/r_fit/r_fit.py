@@ -66,6 +66,10 @@ class RFit(ConnectableComponent):
 
         optional_args = {}
 
+        # make sure our output dir ends with a slash
+        if self.output_dir[-1] != '/':
+            self.output_dir += '/'
+
         with localconverter(ro.default_converter + pandas2ri.converter):
             r_X = ro.conversion.py2rpy(X)
             r_y = ro.conversion.py2rpy(y)
