@@ -657,14 +657,19 @@ class TestCMRunner:
 
         return "", input_csv, __keep_this_around
 
-    @pytest.mark.parametrize("framework", [SKLEARN, XGB, KERAS])
+    @pytest.mark.parametrize("framework", [RDS, SKLEARN, XGB, KERAS])
     @pytest.mark.parametrize("problem", [BINARY, REGRESSION])
-    @pytest.mark.parametrize("language", [PYTHON])
     @pytest.mark.parametrize("docker", [DOCKER_PYTHON_SKLEARN, None])
     @pytest.mark.parametrize("weights", [WEIGHTS_CSV, WEIGHTS_ARGS, None])
     @pytest.mark.parametrize("use_output", [True, False])
     @pytest.mark.parametrize("nested", [True, False])
-    def test_fit(self, framework, problem, language, docker, weights, use_output, tmp_path, nested):
+    def test_fit(self, framework, problem, docker, weights, use_output, tmp_path, nested):
+
+        if framework == RDS:
+            language = R_FIT
+        else:
+            language = PYTHON
+
         custom_model_dir = tmp_path / "custom_model"
         self._create_custom_model_dir(
             custom_model_dir, framework, problem, language, is_training=True, nested=nested
@@ -690,32 +695,6 @@ class TestCMRunner:
             cmd += " --docker {} ".format(docker)
 
         cmd += weights_cmd
-
-        TestCMRunner._exec_shell_cmd(
-            cmd, "Failed in {} command line! {}".format(ArgumentsOptions.MAIN_COMMAND, cmd)
-        )
-
-    @pytest.mark.parametrize("problem", [BINARY, REGRESSION])
-    @pytest.mark.parametrize("use_output", [True, False])
-    def test_r_fit(self, problem, use_output, tmp_path):
-        # TODO: add weight and docker
-        custom_model_dir = tmp_path / "custom_model"
-        self._create_custom_model_dir(
-            custom_model_dir, RDS, problem, R_FIT, is_training=True
-        )
-
-        input_dataset = self._get_dataset_filename(RDS, problem)
-
-        output = tmp_path / "output"
-        output.mkdir()
-
-        cmd = "{} fit --code-dir {} --target {} --input {} --verbose ".format(
-            ArgumentsOptions.MAIN_COMMAND, custom_model_dir, self.target[problem], input_dataset
-        )
-        if use_output:
-            cmd += " --output {}".format(output)
-        if problem == BINARY:
-            cmd = self._cmd_add_class_labels(cmd, RDS, problem)
 
         TestCMRunner._exec_shell_cmd(
             cmd, "Failed in {} command line! {}".format(ArgumentsOptions.MAIN_COMMAND, cmd)
