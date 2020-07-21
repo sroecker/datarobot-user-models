@@ -57,6 +57,7 @@ PYTHON_ALL_HOOKS = "python_all_hooks"
 PYTHON_LOAD_MODEL = "python_load_model"
 R = "R"
 R_ALL_HOOKS = "R_all_hooks"
+R_FIT = "R_fit"
 JAVA = "java"
 PYTHON_XGBOOST_CLASS_LABELS_VALIDATION = "predictions_and_class_labels_validation"
 
@@ -146,6 +147,7 @@ class TestCMRunner:
             (PYTHON, SIMPLE): os.path.join(cls.training_templates_path, "simple"),
             (PYTHON, KERAS): os.path.join(cls.training_templates_path, "python3_keras_joblib"),
             (PYTHON, XGB): os.path.join(cls.training_templates_path, "python3_xgboost"),
+            (R_FIT, RDS): os.path.join(cls.training_templates_path, "r_lang"),
         }
 
         cls.fixtures = {
@@ -165,6 +167,7 @@ class TestCMRunner:
             ),
             R: (os.path.join(cls.tests_fixtures_path, "custom.R"), "custom.R"),
             R_ALL_HOOKS: (os.path.join(cls.tests_fixtures_path, "all_hooks_custom.R"), "custom.R"),
+            R_FIT: (os.path.join(cls.tests_fixtures_path, "fit_custom.R"), "custom.R"),
         }
         cls.datasets = {
             # If specific dataset should be defined for a framework, use (framework, problem) key.
@@ -259,7 +262,15 @@ class TestCMRunner:
         if is_training:
             model_template_dir = cls.paths_to_training_models[(language, framework)]
 
-            for filename in glob.glob(r"{}/*.py".format(model_template_dir)):
+            if language == PYTHON:
+                files = glob.glob(r"{}/*.py".format(model_template_dir))
+            elif language in [R, R_ALL_HOOKS, R_FIT]:
+                files = (
+                    glob.glob(r"{}/*.r".format(model_template_dir))
+                    + glob.glob(r"{}/*.R".format(model_template_dir))
+                )
+
+            for filename in files:
                 shutil.copy2(filename, custom_model_dir)
         else:
             artifact_filenames = cls._get_artifact_filename(framework, problem)
@@ -679,6 +690,32 @@ class TestCMRunner:
             cmd += " --docker {} ".format(docker)
 
         cmd += weights_cmd
+
+        TestCMRunner._exec_shell_cmd(
+            cmd, "Failed in {} command line! {}".format(ArgumentsOptions.MAIN_COMMAND, cmd)
+        )
+
+    @pytest.mark.parametrize("problem", [BINARY, REGRESSION])
+    @pytest.mark.parametrize("use_output", [True, False])
+    def test_r_fit(self, problem, use_output, tmp_path):
+        # TODO: add weight and docker
+        custom_model_dir = tmp_path / "custom_model"
+        self._create_custom_model_dir(
+            custom_model_dir, RDS, problem, R_FIT, is_training=True
+        )
+
+        input_dataset = self._get_dataset_filename(RDS, problem)
+
+        output = tmp_path / "output"
+        output.mkdir()
+
+        cmd = "{} fit --code-dir {} --target {} --input {} --verbose ".format(
+            ArgumentsOptions.MAIN_COMMAND, custom_model_dir, self.target[problem], input_dataset
+        )
+        if use_output:
+            cmd += " --output {}".format(output)
+        if problem == BINARY:
+            cmd = self._cmd_add_class_labels(cmd, RDS, problem)
 
         TestCMRunner._exec_shell_cmd(
             cmd, "Failed in {} command line! {}".format(ArgumentsOptions.MAIN_COMMAND, cmd)
