@@ -173,9 +173,8 @@ class CMRunner(object):
 
         # check which custom code files present in the code dir
         custom_py_paths = list(Path(code_dir_abspath).rglob("{}.py".format("custom")))
-        custom_r_paths = (
-                list(Path(code_dir_abspath).rglob("{}.r".format("custom"))) +
-                list(Path(code_dir_abspath).rglob("{}.R".format("custom")))
+        custom_r_paths = list(Path(code_dir_abspath).rglob("{}.r".format("custom"))) + list(
+            Path(code_dir_abspath).rglob("{}.R".format("custom"))
         )
 
         # if only one custom file found, set it:
@@ -187,7 +186,9 @@ class CMRunner(object):
 
             other_py = list(Path(code_dir_abspath).rglob("*.py"))
 
-            other_r = list(Path(code_dir_abspath).rglob("*.r")) + list(Path(code_dir_abspath).rglob("*.R"))
+            other_r = list(Path(code_dir_abspath).rglob("*.r")) + list(
+                Path(code_dir_abspath).rglob("*.R")
+            )
 
             # if we find any py files and no R files set python, otherwise raise
             if len(other_py) and not len(other_r):

@@ -671,8 +671,12 @@ class TestCMRunner:
 
         custom_model_dir = tmp_path / "custom_model"
         self._create_custom_model_dir(
-            custom_model_dir, framework, problem, language, is_training=True,
-            nested=nested if language == PYTHON else False  # TODO: support nested R files
+            custom_model_dir,
+            framework,
+            problem,
+            language,
+            is_training=True,
+            nested=nested if language == PYTHON else False,  # TODO: support nested R files
         )
 
         input_dataset = self._get_dataset_filename(framework, problem)
