@@ -7,6 +7,7 @@ import subprocess
 import sys
 import tempfile
 from distutils.dir_util import copy_tree
+from pathlib import Path
 from tempfile import mkdtemp, NamedTemporaryFile
 
 import numpy as np
@@ -171,23 +172,22 @@ class CMRunner(object):
         is_py = False
 
         # check which custom code files present in the code dir
-        is_custom_py = CMRunnerUtils.filename_exists_and_is_file(code_dir_abspath, "custom.py")
-        is_custom_r = CMRunnerUtils.filename_exists_and_is_file(
-            code_dir_abspath, "custom.R"
-        ) or CMRunnerUtils.filename_exists_and_is_file(code_dir_abspath, "custom.r")
+        custom_py_paths = list(Path(code_dir_abspath).rglob("{}.py".format("custom")))
+        custom_r_paths = (
+                list(Path(code_dir_abspath).rglob("{}.r".format("custom"))) +
+                list(Path(code_dir_abspath).rglob("{}.R".format("custom")))
+        )
 
         # if only one custom file found, set it:
-        if is_custom_py + is_custom_r == 1:
-            custom_language = RunLanguage.PYTHON if is_custom_py else RunLanguage.R
+        if len(custom_py_paths) + len(custom_r_paths) == 1:
+            custom_language = RunLanguage.PYTHON if custom_py_paths else RunLanguage.R
 
         # if no custom files, look for any other python file to use
-        elif is_custom_py + is_custom_r == 0:
+        elif len(custom_py_paths) + len(custom_r_paths) == 0:
 
-            other_py = CMRunnerUtils.find_files_by_extensions(code_dir_abspath, ".py")
+            other_py = list(Path(code_dir_abspath).rglob("*.py"))
 
-            other_r = CMRunnerUtils.find_files_by_extensions(
-                code_dir_abspath, ".r"
-            ) + CMRunnerUtils.find_files_by_extensions(code_dir_abspath, ".R")
+            other_r = list(Path(code_dir_abspath).rglob("*.r")) + list(Path(code_dir_abspath).rglob("*.R"))
 
             # if we find any py files and no R files set python, otherwise raise
             if len(other_py) and not len(other_r):
