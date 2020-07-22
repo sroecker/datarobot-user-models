@@ -147,16 +147,13 @@ class CMRunner(object):
         return run_language
 
     def _get_fit_run_language(self):
-
         def raise_no_language(custom_language):
             custom_language = "None" if custom_language is None else custom_language.value
             error_mes = (
                 "Can not detect language by custom.py/R files.\n"
                 "Detected: language by custom - {}.\n"
                 "Code directory must have either a custom.py/R file\n"
-                "Or a python file using the drum_autofit() wrapper.".format(
-                    custom_language,
-                )
+                "Or a python file using the drum_autofit() wrapper.".format(custom_language,)
             )
             all_files_message = "\n\nFiles(100 first) found in {}:\n{}\n".format(
                 code_dir_abspath, "\n".join(sorted(os.listdir(code_dir_abspath))[0:100])
@@ -186,15 +183,11 @@ class CMRunner(object):
         # if no custom files, look for any other python file to use
         elif is_custom_py + is_custom_r == 0:
 
-            other_py = CMRunnerUtils.find_files_by_extensions(
-                    code_dir_abspath, ".py"
-            )
+            other_py = CMRunnerUtils.find_files_by_extensions(code_dir_abspath, ".py")
 
             other_r = CMRunnerUtils.find_files_by_extensions(
-                    code_dir_abspath, ".r"
-            ) + CMRunnerUtils.find_files_by_extensions(
-                    code_dir_abspath, ".R"
-            )
+                code_dir_abspath, ".r"
+            ) + CMRunnerUtils.find_files_by_extensions(code_dir_abspath, ".R")
 
             # if we find any py files and no R files set python, otherwise raise
             if len(other_py) and not len(other_r):
