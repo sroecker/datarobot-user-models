@@ -53,4 +53,3 @@ class PythonFit(ConnectableComponent):
 
         make_sure_artifact_is_small(self.output_dir)
         return []
-

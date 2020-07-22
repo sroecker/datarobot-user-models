@@ -265,9 +265,8 @@ class TestCMRunner:
             if language == PYTHON:
                 files = glob.glob(r"{}/*.py".format(model_template_dir))
             elif language in [R, R_ALL_HOOKS, R_FIT]:
-                files = (
-                    glob.glob(r"{}/*.r".format(model_template_dir))
-                    + glob.glob(r"{}/*.R".format(model_template_dir))
+                files = glob.glob(r"{}/*.r".format(model_template_dir)) + glob.glob(
+                    r"{}/*.R".format(model_template_dir)
                 )
 
             for filename in files:

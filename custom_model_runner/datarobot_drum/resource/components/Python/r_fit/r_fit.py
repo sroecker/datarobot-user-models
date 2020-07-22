@@ -67,24 +67,18 @@ class RFit(ConnectableComponent):
         optional_args = {}
 
         # make sure our output dir ends with a slash
-        if self.output_dir[-1] != '/':
-            self.output_dir += '/'
+        if self.output_dir[-1] != "/":
+            self.output_dir += "/"
 
         with localconverter(ro.default_converter + pandas2ri.converter):
             r_X = ro.conversion.py2rpy(X)
             r_y = ro.conversion.py2rpy(y)
             if row_weights is not None:  # pandas complains if we aren't explicit here
-                optional_args['row_weights'] = ro.conversion.py2rpy(row_weights)
+                optional_args["row_weights"] = ro.conversion.py2rpy(row_weights)
             if class_order:
-                optional_args['class_order'] = ro.conversion.py2rpy(class_order)
+                optional_args["class_order"] = ro.conversion.py2rpy(class_order)
 
-        r_handler.outer_fit(X=r_X,
-                            y=r_y,
-                            output_dir=self.output_dir,
-                            ** optional_args
-                            )
+        r_handler.outer_fit(X=r_X, y=r_y, output_dir=self.output_dir, **optional_args)
 
         make_sure_artifact_is_small(self.output_dir)
         return []
-
-
