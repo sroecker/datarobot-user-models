@@ -78,7 +78,7 @@ class CMRunner(object):
         }
         self._print_verbose(mode_headers[self.run_mode])
 
-    def _check_artifacts_and_get_run_language(self, fit=False):
+    def _check_artifacts_and_get_run_language(self):
         # Get code dir's abs path and add it to the python path
         code_dir_abspath = os.path.abspath(self.options.code_dir)
 
@@ -110,24 +110,6 @@ class CMRunner(object):
         # if only one custom file found, set it:
         if is_custom_py + is_custom_r == 1:
             custom_language = RunLanguage.PYTHON if is_custom_py else RunLanguage.R
-
-        # for fit jobs: if no artifacts and no custom, look for other python files
-        if (
-                fit is True
-                and bool(custom_language) + bool(artifact_language) == 0
-        ):
-            other_py = CMRunnerUtils.find_files_by_extensions(
-                code_dir_abspath, ".py"
-            )
-
-            other_r = CMRunnerUtils.find_files_by_extensions(
-                code_dir_abspath, ".r"
-            ) + CMRunnerUtils.find_files_by_extensions(
-                code_dir_abspath, ".R"
-            )
-
-            if len(other_py) and not len(other_r):
-                artifact_language = RunLanguage.PYTHON
 
         # if both language values are None, or both are not None and not equal
         if (
@@ -162,6 +144,72 @@ class CMRunner(object):
             raise DrumCommonException(error_mes)
 
         run_language = custom_language if custom_language is not None else artifact_language
+        return run_language
+
+    def _get_fit_run_language(self):
+
+        def raise_no_language(custom_language):
+            custom_language = "None" if custom_language is None else custom_language.value
+            error_mes = (
+                "Can not detect language by custom.py/R files.\n"
+                "Detected: language by custom - {}.\n"
+                "Code directory must have either a custom.py/R file\n"
+                "Or a python file using the drum_autofit() wrapper.".format(
+                    custom_language,
+                )
+            )
+            all_files_message = "\n\nFiles(100 first) found in {}:\n{}\n".format(
+                code_dir_abspath, "\n".join(sorted(os.listdir(code_dir_abspath))[0:100])
+            )
+
+            error_mes += all_files_message
+            self.logger.error(error_mes)
+            raise DrumCommonException(error_mes)
+
+        # Get code dir's abs path and add it to the python path
+        code_dir_abspath = os.path.abspath(self.options.code_dir)
+
+        custom_language = None
+        run_language = None
+        is_py = False
+
+        # check which custom code files present in the code dir
+        is_custom_py = CMRunnerUtils.filename_exists_and_is_file(code_dir_abspath, "custom.py")
+        is_custom_r = CMRunnerUtils.filename_exists_and_is_file(
+            code_dir_abspath, "custom.R"
+        ) or CMRunnerUtils.filename_exists_and_is_file(code_dir_abspath, "custom.r")
+
+        # if only one custom file found, set it:
+        if is_custom_py + is_custom_r == 1:
+            custom_language = RunLanguage.PYTHON if is_custom_py else RunLanguage.R
+
+        # if no custom files, look for any other python file to use
+        elif is_custom_py + is_custom_r == 0:
+
+            other_py = CMRunnerUtils.find_files_by_extensions(
+                    code_dir_abspath, ".py"
+            )
+
+            other_r = CMRunnerUtils.find_files_by_extensions(
+                    code_dir_abspath, ".r"
+            ) + CMRunnerUtils.find_files_by_extensions(
+                    code_dir_abspath, ".R"
+            )
+
+            # if we find any py files and no R files set python, otherwise raise
+            if len(other_py) and not len(other_r):
+                is_py = True
+            else:
+                raise_no_language(custom_language)
+
+        # otherwise, we're in trouble
+        else:
+            raise_no_language(custom_language)
+
+        if custom_language is not None:
+            run_language = custom_language
+        elif is_py:
+            run_language = RunLanguage.PYTHON
         return run_language
 
     def run(self):
@@ -317,11 +365,12 @@ class CMRunner(object):
         return functional_pipeline_str
 
     def _run_fit_and_predictions_pipelines_in_mlpiper(self):
-        run_language = self._check_artifacts_and_get_run_language(fit=self.run_mode == RunMode.FIT)
         if self.run_mode == RunMode.SERVER:
+            run_language = self._check_artifacts_and_get_run_language()
             # in prediction server mode infra pipeline == prediction server runner pipeline
             infra_pipeline_str = self._prepare_prediction_server_or_batch_pipeline(run_language)
         elif self.run_mode == RunMode.SCORE:
+            run_language = self._check_artifacts_and_get_run_language()
             tmp_output_filename = None
             # if output is not provided, output into tmp file and print
             if not self.options.output:
@@ -331,6 +380,7 @@ class CMRunner(object):
             # in batch prediction mode infra pipeline == predictor pipeline
             infra_pipeline_str = self._prepare_prediction_server_or_batch_pipeline(run_language)
         elif self.run_mode == RunMode.FIT:
+            run_language = self._get_fit_run_language()
             infra_pipeline_str = self._prepare_fit_pipeline(run_language)
         else:
             error_message = "{} mode is not supported here".format(self.run_mode)
