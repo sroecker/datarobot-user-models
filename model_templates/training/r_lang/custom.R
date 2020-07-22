@@ -1,10 +1,11 @@
-init <- function(...) {
+init <- function(code_dir) {
   # custom init function to load required libraries
   library(tidyverse)
   library(caret)
   library(recipes)
   library(e1071)
   library(gbm)
+  source(paste(code_dir, '/create_pipeline.R', sep=''))
 }
 
 fit <- function(X, y, output_dir, class_order=NULL, row_weights=NULL, ...){
@@ -28,24 +29,7 @@ fit <- function(X, y, output_dir, class_order=NULL, row_weights=NULL, ...){
     #' @param ...: Added for forwards compatibility
     #' @return Nothing
 
-  # set up dataframe for modeling
-  train_df <- X
-  train_df$target <- unlist(y)
-
-  # set up the modeling pipeline
-  model_recipe <- recipe(target ~ ., data = train_df) %>%
-    # Drop constant columns
-    step_zv(all_predictors()) %>%
-    # Numeric preprocessing
-    step_medianimpute(all_numeric()) %>%
-    step_normalize(all_numeric(), -all_outcomes()) %>%
-    # Categorical preprocessing
-    step_other(all_nominal(), -all_outcomes()) %>%
-    step_dummy(all_nominal(), -all_outcomes())
-
-  # Run the model
-  model <- train(model_recipe, train_df, method = "gbm")
-
+  model <- create_pipeline(X, y)
   # Save model
   model_path <- file.path(
     paste(
