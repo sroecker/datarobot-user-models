@@ -78,7 +78,7 @@ class CMRunner(object):
         }
         self._print_verbose(mode_headers[self.run_mode])
 
-    def _check_artifacts_and_get_run_language(self):
+    def _check_artifacts_and_get_run_language(self, fit=False):
         # Get code dir's abs path and add it to the python path
         code_dir_abspath = os.path.abspath(self.options.code_dir)
 
@@ -110,6 +110,24 @@ class CMRunner(object):
         # if only one custom file found, set it:
         if is_custom_py + is_custom_r == 1:
             custom_language = RunLanguage.PYTHON if is_custom_py else RunLanguage.R
+
+        # for fit jobs: if no artifacts and no custom, look for other python files
+        if (
+                fit is True
+                and bool(custom_language) + bool(artifact_language) == 0
+        ):
+            other_py = CMRunnerUtils.find_files_by_extensions(
+                code_dir_abspath, ".py"
+            )
+
+            other_r = CMRunnerUtils.find_files_by_extensions(
+                code_dir_abspath, ".r"
+            ) + CMRunnerUtils.find_files_by_extensions(
+                code_dir_abspath, ".R"
+            )
+
+            if len(other_py) and not len(other_r):
+                artifact_language = RunLanguage.PYTHON
 
         # if both language values are None, or both are not None and not equal
         if (
@@ -299,7 +317,7 @@ class CMRunner(object):
         return functional_pipeline_str
 
     def _run_fit_and_predictions_pipelines_in_mlpiper(self):
-        run_language = self._check_artifacts_and_get_run_language()
+        run_language = self._check_artifacts_and_get_run_language(fit=self.run_mode == RunMode.FIT)
         if self.run_mode == RunMode.SERVER:
             # in prediction server mode infra pipeline == prediction server runner pipeline
             infra_pipeline_str = self._prepare_prediction_server_or_batch_pipeline(run_language)
