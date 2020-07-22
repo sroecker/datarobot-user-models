@@ -14,8 +14,8 @@ create_pipeline<-function(X, y) {
     step_other(all_nominal(), -all_outcomes()) %>%
     step_dummy(all_nominal(), -all_outcomes())
 
-  # Run the model
-  model <- train(model_recipe, train_df, method = "gbm")
+  # Run the model using caret
+  model <- train(model_recipe, train_df, method = "gbm", trControl = trainControl(method = "cv", number = 3))
 
   return(model)
 }
