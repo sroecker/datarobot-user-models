@@ -5,7 +5,7 @@ init <- function(code_dir) {
   library(recipes)
   library(e1071)
   library(gbm)
-  source(paste(code_dir, '/create_pipeline.R', sep=''))
+  source(file.path(code_dir, 'create_pipeline.R'))
 }
 
 fit <- function(X, y, output_dir, class_order=NULL, row_weights=NULL, ...){
@@ -31,11 +31,7 @@ fit <- function(X, y, output_dir, class_order=NULL, row_weights=NULL, ...){
 
   model <- create_pipeline(X, y)
   # Save model
-  model_path <- file.path(
-    paste(
-      output_dir, 'artifact.rds', sep=''
-    )
-  )
+  model_path <- file.path(output_dir, 'artifact.rds')
   saveRDS(model, file = model_path)
 }
 
